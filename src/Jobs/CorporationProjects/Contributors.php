@@ -112,7 +112,8 @@ class Contributors extends AbstractAuthCorporationJob
                     'project_id' => $this->project_id,
                 ]);
             } catch (RequestFailedException $exception) {
-                // The project is gone; nothing more to collect.
+                // The project may have finished or been deleted between the listing
+                // and this contributors call. Nothing more to collect for this run.
                 if ($exception->getEsiResponse()->getErrorCode() === 404) {
                     return;
                 }
