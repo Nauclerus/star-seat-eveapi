@@ -94,13 +94,10 @@ class Details extends AbstractAuthCorporationJob
                 'corporation_id' => $cid,
             ]);
         } catch (RequestFailedException $exception) {
-            // The project is gone (deleted or expired in game). Drop our copy
-            // instead of retrying it forever.
+            // The project may have finished, expired, or been deleted between the
+            // listing and this detail call. Leave the row untouched; the listing
+            // endpoint is authoritative and the next run will skip terminal rows.
             if ($exception->getEsiResponse()->getErrorCode() === 404) {
-                CorporationProject::where('id', $this->project_id)
-                    ->where('corporation_id', $cid)
-                    ->delete();
-
                 return;
             }
 
