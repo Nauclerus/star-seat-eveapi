@@ -20,37 +20,34 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+
 namespace Seat\Eveapi\Mapping\Sde\Ccp;
 
 use Seat\Eveapi\Mapping\Sde\AbstractSdeMapping;
 
 /**
- * TODO: UPDATE
- * MapDenormalizeMapping.
+ * StaStationMapping.
  *
- * Used to import csv data into MapDenormalize table.
- * CSV file must be formatted using Fuzzwork format.
- *
- * @url https://www.fuzzwork.co.uk
+ * npcStations.jsonl owns the station itself. Name, security, constellation and
+ * region are added by the seeder from the map and npc corporation dumps, the
+ * docking and reprocessing costs CCP no longer publishes stay null.
  */
-class ChrFactionMapping extends AbstractSdeMapping
+class StaStationMapping extends AbstractSdeMapping
 {
-
     /**
      * @var string[]
      */
     protected static $mapping = [
-        'factionID' => '_key',
-        'factionName' => 'name.en',
-        'description' => 'description.en',
-        // chrFactions held a single race, the new file publishes a list.
-        'raceIDs' => 'memberRaces.0',
+        'stationID' => '_key',
+        'operationID' => 'operationID',
+        'stationTypeID' => 'typeID',
+        'corporationID' => 'ownerID',
         'solarSystemID' => 'solarSystemID',
-        'corporationID' => 'corporationID',
-        'sizeFactor' => 'sizeFactor',
-        // 'stationCount' => '', // Retired, not published by CCP anymore.
-        // 'stationSystemCount' => '', // Retired, not published by CCP anymore.
-        'militiaCorporationID' => 'militiaCorporationID',
-        'iconID' => 'iconID',
+        'x' => 'position.x',
+        'y' => 'position.y',
+        'z' => 'position.z',
+        'reprocessingEfficiency' => 'reprocessingEfficiency',
+        'reprocessingStationsTake' => 'reprocessingStationsTake',
+        'reprocessingHangarFlag' => 'reprocessingHangarFlag',
     ];
 }

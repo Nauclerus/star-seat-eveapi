@@ -20,20 +20,27 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+
 namespace Seat\Eveapi\Database\Seeders\Sde\Ccp;
 
 use Illuminate\Database\Schema\Blueprint;
-use Seat\Eveapi\Mapping\Sde\AbstractSdeMapping;
+use Illuminate\Support\Facades\DB;
 use Seat\Eveapi\Database\Seeders\Sde\AbstractSdeSeeder;
-use Seat\Eveapi\Mapping\Sde\Ccp\InvContrabandTypeMapping;
-use Seat\Eveapi\Models\Sde\InvContrabandType;
+use Seat\Eveapi\Mapping\Sde\AbstractSdeMapping;
+use Seat\Eveapi\Mapping\Sde\Ccp\InvMetaTypeMapping;
 
-class InvContrabandTypesSeeder extends AbstractSdeSeeder
+/**
+ * Class InvMetaTypesSeeder.
+ *
+ * invMetaTypes is derived from types.jsonl, which carries metaGroupID on the
+ * type itself. parentTypeID was retired and is published nowhere, so it stays
+ * null like it is in the dump this table used to come from.
+ *
+ * @package Seat\Eveapi\Database\Seeders\Sde\Ccp
+ */
+class InvMetaTypesSeeder extends AbstractSdeSeeder
 {
-
-    protected const FILENAME = "contrabandTypes.jsonl";
-
-    protected const IS_MULTI_SEEDER = true;
+    protected const FILENAME = 'types.jsonl';
 
     /**
      * Define seeder related SDE table structure.
@@ -43,14 +50,11 @@ class InvContrabandTypesSeeder extends AbstractSdeSeeder
      */
     protected function getSdeTableDefinition(Blueprint $table): void
     {
-        $table->integer('factionID');
-        $table->integer('typeID');
-        $table->double('standingLoss')->nullable();
-        $table->double('confiscateMinSec')->nullable();
-        $table->double('fineByValue')->nullable();
-        $table->double('attackMinSec')->nullable();
-        $table->primary(['factionID', 'typeID']);
-        $table->index('typeID', 'ix_invContrabandTypes_typeID');
+        $table->integer('typeID')->primary();
+        $table->integer('parentTypeID')->nullable();
+        $table->integer('metaGroupID')->nullable();
+
+        $table->index('metaGroupID', 'ix_invMetaTypes_metaGroupID');
     }
 
     /**
@@ -60,11 +64,25 @@ class InvContrabandTypesSeeder extends AbstractSdeSeeder
      */
     protected function getMappingClass(): AbstractSdeMapping
     {
-        return new InvContrabandTypeMapping();
+        return new InvMetaTypeMapping();
     }
 
+    /**
+     * Only types which belong to a meta group are part of this table.
+     *
+     * @param  array  $arr
+     * @return int
+     */
     public function insert($arr)
     {
-        return InvContrabandType::insert($arr);
+        $arr = array_values(array_filter(
+            $arr,
+            fn ($row) => ! is_null($row['metaGroupID'])
+        ));
+
+        if (count($arr) === 0)
+            return 0;
+
+        return DB::table('invMetaTypes')->insert($arr);
     }
 }

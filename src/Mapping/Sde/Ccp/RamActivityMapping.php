@@ -20,37 +20,25 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+
 namespace Seat\Eveapi\Mapping\Sde\Ccp;
 
 use Seat\Eveapi\Mapping\Sde\AbstractSdeMapping;
 
 /**
- * TODO: UPDATE
- * MapDenormalizeMapping.
+ * RamActivityMapping.
  *
- * Used to import csv data into MapDenormalize table.
- * CSV file must be formatted using Fuzzwork format.
- *
- * @url https://www.fuzzwork.co.uk
+ * industryActivities.jsonl publishes plain strings, not the localized
+ * dictionaries the other files use.
  */
-class ChrFactionMapping extends AbstractSdeMapping
+class RamActivityMapping extends AbstractSdeMapping
 {
-
     /**
      * @var string[]
      */
     protected static $mapping = [
-        'factionID' => '_key',
-        'factionName' => 'name.en',
-        'description' => 'description.en',
-        // chrFactions held a single race, the new file publishes a list.
-        'raceIDs' => 'memberRaces.0',
-        'solarSystemID' => 'solarSystemID',
-        'corporationID' => 'corporationID',
-        'sizeFactor' => 'sizeFactor',
-        // 'stationCount' => '', // Retired, not published by CCP anymore.
-        // 'stationSystemCount' => '', // Retired, not published by CCP anymore.
-        'militiaCorporationID' => 'militiaCorporationID',
-        'iconID' => 'iconID',
+        'activityID' => '_key',
+        'activityName' => 'name',
+        'description' => 'description',
     ];
 }

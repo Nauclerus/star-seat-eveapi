@@ -30,7 +30,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Seat\Eveapi\Database\Seeders\CcpSdeSeeder;
 use Seat\Eveapi\Models\Sde\MapDenormalize;
+use Seat\Eveapi\Services\Sde\CcpStaticData;
 use Seat\Services\Helpers\AnalyticsContainer;
 use Seat\Services\Jobs\Analytics;
 use Seat\Services\Settings\Seat;
@@ -58,6 +60,7 @@ class Sde extends Command
      * @var string
      */
     protected $signature = 'eve:update:sde
+                            {--source= : Which SDE source to use: ccp (default) or fuzzwork}
                             {--local : Check the local config file for the version string}
                             {--force : Force re-installation of an existing SDE version}';
 
@@ -100,12 +103,57 @@ class Sde extends Command
     }
 
     /**
+     * Install the SDE from the source which was asked for.
+     *
+     * CCP jsonl static data is the default source; the Fuzzwork dump is only
+     * used as a fallback when the source was not explicitly requested.
+     *
+     * @return int
+     *
+     * @throws \Seat\Services\Exceptions\SettingException
+     */
+    public function handle()
+    {
+
+        // Test that we have valid Database details. An exception
+        // will be thrown if this fails.
+        DB::connection()->getDatabaseName();
+
+        $requested = $this->option('source');
+        $source = strtolower((string) ($requested ?? 'ccp'));
+
+        if (! in_array($source, ['ccp', 'fuzzwork'])) {
+
+            $this->error('Unknown SDE source: ' . $requested . '. Use ccp or fuzzwork.');
+
+            return $this::INVALID;
+        }
+
+        if ($source === 'ccp') {
+
+            $result = $this->handleCcp();
+
+            if ($result === $this::SUCCESS)
+                return $result;
+
+            // Only a source nobody explicitly asked for may fall back.
+            if (! is_null($requested))
+                return $result;
+
+            $this->warn('The CCP static data import failed, ' .
+                'falling back to the Fuzzwork dump.');
+        }
+
+        return $this->handleFuzzwork();
+    }
+
+    /**
      * Query the eveseat/resources repository for SDE
      * related information.
      *
      * @throws \Seat\Services\Exceptions\SettingException
      */
-    public function handle()
+    public function handleFuzzwork()
     {
 
         // Start by warning the user about the command that will be run
@@ -162,12 +210,7 @@ class Sde extends Command
         $this->json->tables = array_unique(array_merge($this->json->tables, $extra_tables));
         sort($this->json->tables, SORT_STRING);
 
-        $all_sde_tables_exist = true;
-        foreach ($this->json->tables as $table) {
-            if(! Schema::hasTable($table)) {
-                $all_sde_tables_exist = false;
-            }
-        }
+        $all_sde_tables_exist = $this->allSdeTablesExist($this->json->tables);
 
         // Avoid an existing SDE to be accidentally installed again
         // except if the user explicitly ask for it
@@ -254,6 +297,151 @@ class Sde extends Command
     }
 
     /**
+     * Install the SDE from the CCP jsonl static data archive.
+     *
+     * @return int
+     */
+    public function handleCcp()
+    {
+        $this->comment('The SDE will be imported from the CCP jsonl static data archive.');
+        $this->line('');
+
+        $build = $this->getCcpBuild();
+
+        if (is_null($build)) {
+
+            $this->error('Unable to determine the latest CCP static data build.');
+
+            return $this::FAILURE;
+        }
+
+        $version = (string) $build;
+        $sde = new CcpStaticData();
+
+        // Tables other packages registered cannot be supplied by the CCP
+        // archive; say so instead of silently leaving them behind.
+        $unsupported = array_values(array_diff(
+            config('seat.sde.tables', []), self::SDE_TABLES));
+
+        if (count($unsupported) > 0)
+            $this->warn('The CCP archive does not provide these registered tables: ' .
+                implode(', ', $unsupported));
+
+        // Avoid an existing SDE to be accidentally installed again
+        // except if the user explicitly ask for it
+        if ($version == Seat::get('installed_sde') &&
+            $this->option('force') == false &&
+            $this->allSdeTablesExist(self::SDE_TABLES)
+        ) {
+
+            $this->warn('You are already running the latest SDE version.');
+            $this->warn('If you want to install it again, run this command with --force argument.');
+
+            return $this::SUCCESS;
+        }
+
+        if ($this->option('force')) {
+
+            $this->warn('You will re-download and install the current SDE version.');
+
+            if (! $this->confirm('Are you sure ?', true)) {
+
+                $this->info('Nothing has been updated.');
+
+                return $this::SUCCESS;
+            }
+        }
+
+        $this->info('The local SDE data will be updated to CCP build ' . $build);
+        $this->info(count(self::SDE_TABLES) . ' tables will be updated: ' .
+            implode(', ', self::SDE_TABLES));
+        $this->info('Download format will be: .jsonl archive');
+        $this->line('');
+
+        if (! $this->confirm('Does the above look OK?', true)) {
+
+            $this->warn('Exiting');
+
+            return $this::SUCCESS;
+        }
+
+        try {
+
+            if (! $sde->isComplete($build))
+                $sde->download($build, fn($line) => $this->line($line));
+
+            $seeder = new CcpSdeSeeder($sde->directory($build), $build);
+            $seeder->setCommand($this);
+            $seeder->run();
+        } catch (\Throwable $e) {
+
+            $this->error('The CCP static data import failed: ' . $e->getMessage());
+            Log::warning('CCP static data import failed: ' . $e->getMessage());
+
+            return $this::FAILURE;
+        }
+
+        // The map related tables are derived from the imported mapDenormalize.
+        $this->explodeMap();
+
+        Seat::set('installed_sde', $version);
+
+        $this->line('SDE Update Command Complete');
+
+        // Analytics
+        dispatch(new Analytics((new AnalyticsContainer)
+            ->set('type', 'event')
+            ->set('ec', 'queues')
+            ->set('ea', 'update_sde')
+            ->set('el', 'console')
+            ->set('ev', $version)));
+
+        return $this::SUCCESS;
+    }
+
+    /**
+     * Build number of the CCP static data to install.
+     *
+     * @return int|null
+     */
+    private function getCcpBuild(): ?int
+    {
+        if ($this->option('local')) {
+
+            $pinned = env('SDE_CCP_BUILD', env('SDE_VERSION'));
+
+            if (! is_null($pinned) && (int) $pinned > 0) {
+
+                $this->comment('Using locally sourced build number of: ' . $pinned);
+
+                return (int) $pinned;
+            }
+
+            $this->warn('Unable to determine the version number override. ' .
+                'Using the remote build.');
+        }
+
+        return CcpStaticData::latestBuild();
+    }
+
+    /**
+     * Check that every SDE table is present.
+     *
+     * @param  array  $tables
+     * @return bool
+     */
+    private function allSdeTablesExist(array $tables): bool
+    {
+        foreach ($tables as $table) {
+
+            if (! Schema::hasTable($table))
+                return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Build the SDE download descriptor. eveseat/resources still advertises
      * Fuzzwork's retired per-table .sql.bz2 dump; Fuzzwork now publishes the
      * same tables as gzip under latest/mysql_tables, so build the descriptor
@@ -264,20 +452,11 @@ class Sde extends Command
     public function getJsonResource()
     {
 
-        $tables = [
-            'chrFactions', 'dgmTypeAttributes', 'dgmTypeEffects', 'invCategories',
-            'invContrabandTypes', 'invControlTowerResourcePurposes',
-            'invControlTowerResources', 'invFlags', 'invGroups', 'invItems',
-            'invMarketGroups', 'invMetaGroups', 'invMetaTypes', 'invNames',
-            'invPositions', 'invTypeMaterials', 'invTypeReactions', 'invTypes',
-            'invUniqueNames', 'mapDenormalize', 'ramActivities', 'staStations',
-        ];
-
         return (object) [
             'version' => $this->getFuzzworkLatestVersion(),
             'url' => self::FUZZWORK_TABLES_URL,
             'format' => '.sql.gz',
-            'tables' => $tables,
+            'tables' => self::SDE_TABLES,
         ];
     }
 

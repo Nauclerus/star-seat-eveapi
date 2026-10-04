@@ -20,20 +20,26 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+
 namespace Seat\Eveapi\Database\Seeders\Sde\Ccp;
 
 use Illuminate\Database\Schema\Blueprint;
-use Seat\Eveapi\Mapping\Sde\AbstractSdeMapping;
 use Seat\Eveapi\Database\Seeders\Sde\AbstractSdeSeeder;
-use Seat\Eveapi\Mapping\Sde\Ccp\InvContrabandTypeMapping;
-use Seat\Eveapi\Models\Sde\InvContrabandType;
+use Seat\Eveapi\Mapping\Sde\AbstractSdeMapping;
+use Seat\Eveapi\Mapping\Sde\Ccp\RamActivityMapping;
+use Seat\Eveapi\Models\Sde\RamActivity;
 
-class InvContrabandTypesSeeder extends AbstractSdeSeeder
+/**
+ * Class RamActivitiesSeeder.
+ *
+ * industryActivities.jsonl is the source of the activity ids every industry
+ * job, blueprint and assembly line refers to.
+ *
+ * @package Seat\Eveapi\Database\Seeders\Sde\Ccp
+ */
+class RamActivitiesSeeder extends AbstractSdeSeeder
 {
-
-    protected const FILENAME = "contrabandTypes.jsonl";
-
-    protected const IS_MULTI_SEEDER = true;
+    protected const FILENAME = 'industryActivities.jsonl';
 
     /**
      * Define seeder related SDE table structure.
@@ -43,14 +49,11 @@ class InvContrabandTypesSeeder extends AbstractSdeSeeder
      */
     protected function getSdeTableDefinition(Blueprint $table): void
     {
-        $table->integer('factionID');
-        $table->integer('typeID');
-        $table->double('standingLoss')->nullable();
-        $table->double('confiscateMinSec')->nullable();
-        $table->double('fineByValue')->nullable();
-        $table->double('attackMinSec')->nullable();
-        $table->primary(['factionID', 'typeID']);
-        $table->index('typeID', 'ix_invContrabandTypes_typeID');
+        $table->integer('activityID')->primary();
+        $table->string('activityName', 100)->nullable();
+        $table->string('iconNo', 5)->nullable();
+        $table->string('description', 1000)->nullable();
+        $table->boolean('published')->nullable();
     }
 
     /**
@@ -60,11 +63,15 @@ class InvContrabandTypesSeeder extends AbstractSdeSeeder
      */
     protected function getMappingClass(): AbstractSdeMapping
     {
-        return new InvContrabandTypeMapping();
+        return new RamActivityMapping();
     }
 
+    /**
+     * @param  array  $arr
+     * @return int
+     */
     public function insert($arr)
     {
-        return InvContrabandType::insert($arr);
+        return RamActivity::insert($arr);
     }
 }

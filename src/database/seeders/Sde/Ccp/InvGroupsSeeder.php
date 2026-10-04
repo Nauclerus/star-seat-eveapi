@@ -68,7 +68,6 @@ class InvGroupsSeeder extends AbstractSdeSeeder
 
     public function insert($arr)
     {
-        // Replace 'YourModel' with the actual model class name
         return InvGroup::insert($arr);
     }
 }

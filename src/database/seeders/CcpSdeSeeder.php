@@ -23,11 +23,9 @@
 namespace Seat\Eveapi\Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Http;
+use Seat\Eveapi\Database\Seeders\Sde\AbstractSdeSeeder;
 use Seat\Eveapi\Database\Seeders\Sde\Ccp\ChrFactionsSeeder;
 use Seat\Eveapi\Database\Seeders\Sde\Ccp\DgmTypeAttributesSeeder;
-use Seat\Eveapi\Database\Seeders\Sde\Ccp\InvTypesSeeder;
 use Seat\Eveapi\Database\Seeders\Sde\Ccp\DgmTypeEffectsSeeder;
 use Seat\Eveapi\Database\Seeders\Sde\Ccp\InvCategoriesSeeder;
 use Seat\Eveapi\Database\Seeders\Sde\Ccp\InvContrabandTypesSeeder;
@@ -35,184 +33,128 @@ use Seat\Eveapi\Database\Seeders\Sde\Ccp\InvControlTowerResourcesSeeder;
 use Seat\Eveapi\Database\Seeders\Sde\Ccp\InvGroupsSeeder;
 use Seat\Eveapi\Database\Seeders\Sde\Ccp\InvMarketGroupsSeeder;
 use Seat\Eveapi\Database\Seeders\Sde\Ccp\InvMetaGroupsSeeder;
-use Symfony\Component\Finder\Exception\DirectoryNotFoundException;
+use Seat\Eveapi\Database\Seeders\Sde\Ccp\InvMetaTypesSeeder;
+use Seat\Eveapi\Database\Seeders\Sde\Ccp\InvTypeMaterialsSeeder;
+use Seat\Eveapi\Database\Seeders\Sde\Ccp\InvTypesSeeder;
+use Seat\Eveapi\Database\Seeders\Sde\Ccp\MapDenormalizeSeeder;
+use Seat\Eveapi\Database\Seeders\Sde\Ccp\RamActivitiesSeeder;
+use Seat\Eveapi\Database\Seeders\Sde\Ccp\RetiredSdeTablesSeeder;
+use Seat\Eveapi\Database\Seeders\Sde\Ccp\StaStationsSeeder;
 
 /**
- * SdeSeeder.
+ * Class CcpSdeSeeder.
  *
- * Used as a facade to seed all SDE related tables.
+ * Used as a facade to seed all SDE related tables from a CCP jsonl dump.
+ *
+ * The dump is expected to be extracted already and every table is created by
+ * its own seeder. The order below is the order the tables depend on each other:
+ * types and groups before the tables which reference them, the map before the
+ * npc stations which take their name and security from it.
+ *
+ * @package Seat\Eveapi\Database\Seeders
  */
 class CcpSdeSeeder extends Seeder
 {
-
     /**
-     * @var string
-     */
-    private $version = '3444265';
-
-    /**
-     * The SDE file storage path.
+     * Seeders in the order their tables depend on each other.
      *
-     * @var
+     * @var string[]
      */
-    protected $storage_path;
-
-    private $imported_files = [];
-
-    // TODO, would be nice to dynamically build this...
-    private const  SEEDER_MAP = [
-        'types.jsonl' => InvTypesSeeder::class,
-        'typeDogma.jsonl' => [DgmTypeAttributesSeeder::class, DgmTypeEffectsSeeder::class],
-        'factions.jsonl' => ChrFactionsSeeder::class,
-        'categories.jsonl' => InvCategoriesSeeder::class,
-        'contrabandTypes.jsonl' => InvContrabandTypesSeeder::class,
-        'controlTowerResources.jsonl' => InvControlTowerResourcesSeeder::class,
-        'groups.jsonl' => InvGroupsSeeder::class,
-        'marketGroups.jsonl' => InvMarketGroupsSeeder::class,
-        'metaGroups.jsonl' => InvMetaGroupsSeeder::class,
+    private const SEEDERS = [
+        InvTypesSeeder::class,
+        InvGroupsSeeder::class,
+        InvCategoriesSeeder::class,
+        InvMarketGroupsSeeder::class,
+        InvMetaGroupsSeeder::class,
+        InvMetaTypesSeeder::class,
+        ChrFactionsSeeder::class,
+        InvContrabandTypesSeeder::class,
+        InvControlTowerResourcesSeeder::class,
+        DgmTypeAttributesSeeder::class,
+        DgmTypeEffectsSeeder::class,
+        InvTypeMaterialsSeeder::class,
+        RamActivitiesSeeder::class,
+        MapDenormalizeSeeder::class,
+        StaStationsSeeder::class,
+        RetiredSdeTablesSeeder::class,
     ];
 
-    private $seeders = [];
-
     /**
-     * @throws \Seat\Eveapi\Exception\InvalidSdeSeederException
-     */
-    public function run()
-    {
-        // extract sde file/seeder mapping from config
-        // $sde_seeders = config('seat.sde.seeders', []);
-        // configure sde version
-        $this->version = config('eveapi.config.sde.version') ?? $this->version;
-        $this->command->info('Checking configuration...');
-        if (! $this->isStorageOk())
-            throw new DirectoryNotFoundException('Storage path is not OK. Please check permissions.');
-
-        $this->command->info('Using SDE Version: ' . $this->version);
-
-        $this->command->info('Downloading static files...');
-        $this->downloadStaticFiles();
-
-        $this->command->info('Seeding SDE into Database...');
-        $this->call($this->seeders);
-    }
-
-    
-    /**
-     * Download the EVE Sde from Fuzzwork and save it
-     * in the storage_path/sde folder.
-     */
-    private function downloadStaticFiles()
-    {
-        $sde = sprintf('eve-online-static-data-%d-jsonl.zip', $this->version);
-
-        $url = sprintf('https://developers.eveonline.com/static-data/tranquility/%s', $sde);
-        $destination = $this->storage_path . $sde;
-
-        // Now actually start fetching it!
-        $result = Http::sink($destination)->get($url);
-        // Check we are actually setting UA.
-        // dump($result->transferStats->getRequest()->getHeaders());
-        $result->throw();
-
-        // Now need to extract the zip file.
-        $this->extractZipWithProgress($destination, $this->storage_path);
-        if (file_exists($destination)) {
-            unlink($destination);
-            $this->command->info("Deleted ZIP file: $destination");
-        }
-    }
-
-    private function extractZipWithProgress(string $zipPath, string $destination): void
-    {
-        $zip = new \ZipArchive;
-
-        if ($zip->open($zipPath) !== true) {
-            $this->command->error("Could not open ZIP file: $zipPath");
-            return;
-        }
-
-        $fileCount = $zip->numFiles;
-
-        $this->command->info("Extracting ZIP ($fileCount files)…");
-        $progressBar = $this->getProgressBar($fileCount);
-        $progressBar->start();
-
-        // Loop through files and extract individually
-        for ($i = 0; $i < $fileCount; $i++) {
-            $fileInfo = $zip->statIndex($i);
-            $fileName = $fileInfo['name'];
-            $this->imported_files[] = $fileName;
-
-            // Extract single file
-            $zip->extractTo($destination, $fileName);
-
-            $seeder = $this->resolveSeeder($fileName);
-            if (! is_null($seeder)) {
-                $this->seeders = array_merge($this->seeders, $seeder);
-                // $this->command->info("Adding seeder " . $fileName . " In location: " . $destination);
-            }
-
-            // Advance progress bar
-            $progressBar->advance();
-        }
-
-        $zip->close();
-
-        $progressBar->finish();
-        $this->command->newLine();
-        $this->command->info("Extraction completed: $destination");
-    }
-
-    /**
-     * Get a new progress bar to display based on the
-     * amount of iterations we expect to use.
+     * Directory the extracted jsonl dump is read from.
      *
-     * @param  $iterations
-     * @return \Symfony\Component\Console\Helper\ProgressBar
+     * @var string
      */
-    public function getProgressBar($iterations)
-    {
+    protected string $directory;
 
-        $bar = $this->command->getOutput()->createProgressBar($iterations);
-
-        $bar->setFormat(' %current%/%max% [%bar%] %percent:3s%% %elapsed:6s% %memory:6s%');
-
-        return $bar;
-    }
     /**
-     * Check that the storage path is ok. I needed it
-     * will be automatically created.
+     * Build number the dump belongs to.
      *
-     * @return bool
+     * @var int
      */
-    private function isStorageOk(): bool
+    protected int $build;
+
+    /**
+     * @param string $directory
+     * @param int    $build
+     */
+    public function __construct(string $directory, int $build = 0)
     {
-        $storage = storage_path('sde/');
-        $this->command->getOutput()->writeln("<comment>SDE storage path is:</comment> {$storage}");
-
-        if (File::isWritable(storage_path())) {
-
-            // Check that the path exists
-            if (! File::exists($storage))
-                File::makeDirectory($storage, 0755, true);
-
-            $this->storage_path = $storage;
-
-            return true;
-        }
-
-        return false;
+        $this->directory = rtrim($directory, DIRECTORY_SEPARATOR);
+        $this->build = $build;
     }
 
-    private function resolveSeeder(string $filename): ?array
+    /**
+     * Seed every SDE table from the extracted dump.
+     *
+     * @return void
+     *
+     * @throws \RuntimeException when the dump is incomplete
+     */
+    public function run(): void
     {
-        if (array_key_exists(basename($filename), self::SEEDER_MAP)) {
-            $seeder =  self::SEEDER_MAP[basename($filename)];
-            if (is_array($seeder)) 
-                return $seeder;
-            return [$seeder];
+        $missing = $this->missingFiles();
+
+        if (count($missing) > 0)
+            throw new \RuntimeException(sprintf(
+                'The SDE dump in %1$s is incomplete, missing: %2$s.',
+                $this->directory,
+                implode(', ', $missing)));
+
+        AbstractSdeSeeder::setSourceDirectory($this->directory);
+        MapDenormalizeSeeder::setSourceDirectory($this->directory);
+
+        $this->command->info(sprintf(
+            'Seeding SDE build %s from %s', $this->build, $this->directory));
+
+        foreach (self::SEEDERS as $seeder) {
+            $instance = new $seeder();
+            $instance->setCommand($this->command);
+            $instance->run();
         }
 
-        return null;
+        AbstractSdeSeeder::setSourceDirectory(null);
+        MapDenormalizeSeeder::setSourceDirectory(null);
+    }
+
+    /**
+     * Dump files the seeders need which are not present.
+     *
+     * @return string[]
+     */
+    public function missingFiles(): array
+    {
+        $missing = [];
+
+        foreach (self::SEEDERS as $seeder) {
+            if (! is_subclass_of($seeder, AbstractSdeSeeder::class))
+                continue;
+
+            $filename = $seeder::getSdeFilename();
+
+            if ($filename !== '' && ! file_exists($this->directory . DIRECTORY_SEPARATOR . $filename))
+                $missing[] = $filename;
+        }
+
+        return $missing;
     }
 }

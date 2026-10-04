@@ -44,11 +44,6 @@ class InvMetaGroupMapping extends AbstractSdeMapping
         'metaGroupName' => 'name.en',
         'description' => 'description.en',
         'iconID' => 'iconID',
-
-        'colorRed' =>  'color.r',
-        'colorBlue' =>  'color.b',
-        'colorGreen' =>  'color.g',
-        'iconSuffix' => 'iconSuffix',
-
+        // color/iconSuffix are published by CCP but no longer part of the table.
     ];
 }
