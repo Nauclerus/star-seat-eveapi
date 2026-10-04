@@ -118,6 +118,7 @@ class StaStationsSeeder extends AbstractSdeSeeder
         DB::table('mapDenormalize')
             ->where('groupID', MapDenormalize::STATION)
             ->select(['itemID', 'itemName', 'security', 'constellationID', 'regionID'])
+            ->orderBy('itemID')
             ->chunk(1000, function ($rows) {
                 foreach ($rows as $row)
                     DB::table('staStations')

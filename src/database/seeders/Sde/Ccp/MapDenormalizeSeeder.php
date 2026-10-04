@@ -87,13 +87,6 @@ class MapDenormalizeSeeder extends Seeder
     protected array $systems = [];
 
     /**
-     * constellationID => name, regionID.
-     *
-     * @var array
-     */
-    protected array $constellations = [];
-
-    /**
      * itemID => display name of a body a station orbits.
      *
      * @var array
@@ -214,12 +207,6 @@ class MapDenormalizeSeeder extends Seeder
                 'regionID' => $row['regionID'] ?? null,
                 'security' => $row['securityStatus'] ?? null,
                 'starID' => $row['starID'] ?? null,
-            ];
-
-        foreach ($this->read('mapConstellations.jsonl') as $row)
-            $this->constellations[$row['_key']] = [
-                'name' => $this->localized($row['name'] ?? null),
-                'regionID' => $row['regionID'] ?? null,
             ];
 
         foreach ($this->read('npcCorporations.jsonl') as $row)
@@ -399,8 +386,10 @@ class MapDenormalizeSeeder extends Seeder
     protected function seedMoons($bar): void
     {
         $this->seedFile('mapMoons.jsonl', function (array $row) {
+            // The retired table never used a moon's uniqueName; it numbered the
+            // moon after its system and planet like any other.
             $name = $this->bodyName(
-                $row, $row['celestialIndex'] ?? null, $row['orbitIndex'] ?? null);
+                $row, $row['celestialIndex'] ?? null, $row['orbitIndex'] ?? null, null, false);
 
             $this->rememberStationBody($row['_key'], $name);
 
@@ -451,14 +440,13 @@ class MapDenormalizeSeeder extends Seeder
     }
 
     /**
-     * Seed stargates. A gate is named after the constellation it leads to.
+     * Seed stargates. A gate is named after the system it leads to.
      */
     protected function seedStargates($bar): void
     {
         $this->seedFile('mapStargates.jsonl', function (array $row) {
             $destination = $row['destination']['solarSystemID'] ?? null;
-            $name = sprintf('Stargate (%s)', $this->constellationName(
-                $this->constellationOf($destination)));
+            $name = sprintf('Stargate (%s)', $this->systemName($destination));
 
             return $this->position($row) + [
                 'itemID' => $row['_key'],
@@ -669,21 +657,28 @@ class MapDenormalizeSeeder extends Seeder
      * Display name of a planet, moon or belt.
      *
      * CCP names only the bodies which have a real name, the rest are numbered
-     * after their system the way the retired table did.
+     * after their system the way the retired table did. The retired table used
+     * a body's uniqueName for planets and belts, but numbered moons after their
+     * system and planet even when the dump carried a uniqueName for them.
      *
      * @param  array       $row
      * @param  int|null    $celestialIndex
      * @param  int|null    $orbitIndex
      * @param  string|null $orbitLabel
+     * @param  bool        $allowUniqueName
      * @return string|null
      */
     protected function bodyName(
-        array $row, ?int $celestialIndex, ?int $orbitIndex, ?string $orbitLabel = null): ?string
+        array $row, ?int $celestialIndex, ?int $orbitIndex,
+        ?string $orbitLabel = null, bool $allowUniqueName = true): ?string
     {
-        $unique = $this->localized($row['uniqueName'] ?? null);
+        if ($allowUniqueName) {
 
-        if (! is_null($unique))
-            return $unique;
+            $unique = $this->localized($row['uniqueName'] ?? null);
+
+            if (! is_null($unique))
+                return $unique;
+        }
 
         $system = $this->systems[$row['solarSystemID'] ?? 0] ?? null;
 
@@ -727,10 +722,15 @@ class MapDenormalizeSeeder extends Seeder
             $name = $system['name'] ?? null;
         }
 
-        if (is_null($name) || ($row['useOperationName'] ?? true) === false)
-            return $name;
+        if (is_null($name))
+            return null;
 
         $corporation = $this->corporations[$row['ownerID'] ?? 0] ?? '';
+
+        // Without an operation the corporation still names the station.
+        if (($row['useOperationName'] ?? true) === false)
+            return $corporation === '' ? $name : sprintf('%s - %s', $name, $corporation);
+
         $operation = $this->operations[$row['operationID'] ?? 0] ?? '';
 
         return sprintf('%s - %s %s', $name, $corporation, $operation);
@@ -772,13 +772,13 @@ class MapDenormalizeSeeder extends Seeder
     }
 
     /**
-     * Name of a constellation.
+     * Name of a solar system.
      *
-     * @param  int|null  $constellationID
+     * @param  int|null  $solarSystemID
      * @return string
      */
-    protected function constellationName(?int $constellationID): string
+    protected function systemName(?int $solarSystemID): string
     {
-        return $this->constellations[$constellationID ?? 0]['name'] ?? '';
+        return $this->systems[$solarSystemID ?? 0]['name'] ?? '';
     }
 }

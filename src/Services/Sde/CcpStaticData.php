@@ -187,13 +187,13 @@ class CcpStaticData
      *
      * @throws \RuntimeException
      */
-    public function download(int $build, callable $message = null): bool
+    public function download(int $build, ?callable $message = null): bool
     {
         $message = $message ?: function (string $line) {
         };
 
         $url = sprintf(
-            'https://developers.eveonline.com/static-data/eve-online-static-data-%d-jsonl.zip', $build);
+            'https://developers.eveonline.com/static-data/tranquility/eve-online-static-data-%d-jsonl.zip', $build);
 
         $archive = $this->storage_path . sprintf('eve-online-static-data-%d-jsonl.zip', $build);
 
