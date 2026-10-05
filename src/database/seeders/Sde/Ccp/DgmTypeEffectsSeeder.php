@@ -63,7 +63,6 @@ class DgmTypeEffectsSeeder extends AbstractSdeSeeder
 
     public function insert($arr) 
     {
-        // Replace 'YourModel' with the actual model class name
         return DgmTypeEffect::insert($arr);
     }
 }

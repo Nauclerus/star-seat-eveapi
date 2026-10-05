@@ -50,21 +50,45 @@ class DgmTypeAttributesSeeder extends AbstractSdeSeeder
         $table->double('valueFloat')->nullable();
 
         $table->primary(['typeID', 'attributeID']);
+        $table->index('attributeID', 'ix_dgmTypeAttributes_attributeID');
     }
 
     /**
      * The mapping instance which must be used to seed table with SDE dump.
      *
-     * @return \Seat\Eveapi\Mapping\Sde\AbstractSdekMapping
+     * @return \Seat\Eveapi\Mapping\Sde\AbstractSdeMapping
      */
     protected function getMappingClass(): AbstractSdeMapping
     {
         return new DgmTypeAttributeMapping();
     }
 
-    public function insert($arr) 
+    /**
+     * CCP publishes a single value per attribute. Store it in valueFloat and
+     * mirror it into valueInt when it is a whole number, so readers which only
+     * look at one of the two columns still find the value.
+     *
+     * @param  array  $arr
+     * @return int
+     */
+    public function insert($arr)
     {
-        // Replace 'YourModel' with the actual model class name
+        foreach ($arr as &$row) {
+            $value = $row['valueFloat'] ?? null;
+
+            // Every row must carry the same columns for a batch insert.
+            $row['valueInt'] = null;
+            $row['valueFloat'] = is_null($value) ? null : (float) $value;
+
+            if (is_null($row['valueFloat']))
+                continue;
+
+            if (abs($row['valueFloat'] - round($row['valueFloat'])) < 0.000001 &&
+                abs($row['valueFloat']) <= 2147483647)
+                $row['valueInt'] = (int) round($row['valueFloat']);
+        }
+        unset($row);
+
         return DgmTypeAttribute::insert($arr);
     }
 }

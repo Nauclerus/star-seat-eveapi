@@ -25,24 +25,24 @@ namespace Seat\Eveapi\Mapping\Sde\Ccp;
 use Seat\Eveapi\Mapping\Sde\AbstractSdeMapping;
 
 /**
- * TODO: UPDATE
- * MapDenormalizeMapping.
+ * InvTypeMaterialMapping.
  *
- * Used to import csv data into MapDenormalize table.
- * CSV file must be formatted using Fuzzwork format.
- *
- * @url https://www.fuzzwork.co.uk
+ * typeMaterials.jsonl holds one row per type with its materials nested in an
+ * array, so every nested material becomes an invTypeMaterials row carrying the
+ * typeID of its parent.
  */
-class InvCategoryMapping extends AbstractSdeMapping
+class InvTypeMaterialMapping extends AbstractSdeMapping
 {
+    protected const MULTI_ARRAY_KEY = ['_key', 'typeID'];
+
+    protected const MULTI_NEST_PATH = 'materials';
 
     /**
      * @var string[]
      */
     protected static $mapping = [
-        'categoryID' => '_key',
-        'categoryName' => 'name.en',
-        'iconID' => 'iconID',
-        'published' => 'published',
+        // 'typeID' => '', // Populated from the parent row.
+        'materialTypeID' => 'materialTypeID',
+        'quantity' => 'quantity',
     ];
 }

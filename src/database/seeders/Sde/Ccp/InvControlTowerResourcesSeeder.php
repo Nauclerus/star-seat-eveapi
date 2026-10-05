@@ -46,8 +46,8 @@ class InvControlTowerResourcesSeeder extends AbstractSdeSeeder
     {
         $table->integer('controlTowerTypeID');
         $table->integer('resourceTypeID');
-        $table->integer('purpose');
-        $table->integer('quantity');
+        $table->integer('purpose')->nullable();
+        $table->integer('quantity')->nullable();
         $table->double('minSecurityLevel')->nullable();
         $table->integer('factionID')->nullable();
 
@@ -66,7 +66,6 @@ class InvControlTowerResourcesSeeder extends AbstractSdeSeeder
 
     public function insert($arr) 
     {
-        // Replace 'YourModel' with the actual model class name
         return InvControlTowerResource::insert($arr);
     }
 }

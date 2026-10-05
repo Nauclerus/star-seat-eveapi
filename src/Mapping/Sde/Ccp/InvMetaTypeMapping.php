@@ -20,37 +20,25 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+
 namespace Seat\Eveapi\Mapping\Sde\Ccp;
 
 use Seat\Eveapi\Mapping\Sde\AbstractSdeMapping;
 
 /**
- * TODO: UPDATE
- * MapDenormalizeMapping.
+ * InvMetaTypeMapping.
  *
- * Used to import csv data into MapDenormalize table.
- * CSV file must be formatted using Fuzzwork format.
- *
- * @url https://www.fuzzwork.co.uk
+ * invMetaTypes is derived from types.jsonl: CCP publishes metaGroupID on the
+ * type itself. parentTypeID was retired with the old table and is published
+ * nowhere, so it stays null.
  */
-class ChrFactionMapping extends AbstractSdeMapping
+class InvMetaTypeMapping extends AbstractSdeMapping
 {
-
     /**
      * @var string[]
      */
     protected static $mapping = [
-        'factionID' => '_key',
-        'factionName' => 'name.en',
-        'description' => 'description.en',
-        // chrFactions held a single race, the new file publishes a list.
-        'raceIDs' => 'memberRaces.0',
-        'solarSystemID' => 'solarSystemID',
-        'corporationID' => 'corporationID',
-        'sizeFactor' => 'sizeFactor',
-        // 'stationCount' => '', // Retired, not published by CCP anymore.
-        // 'stationSystemCount' => '', // Retired, not published by CCP anymore.
-        'militiaCorporationID' => 'militiaCorporationID',
-        'iconID' => 'iconID',
+        'typeID' => '_key',
+        'metaGroupID' => 'metaGroupID',
     ];
 }

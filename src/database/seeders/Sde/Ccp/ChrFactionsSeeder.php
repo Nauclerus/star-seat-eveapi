@@ -49,10 +49,9 @@ class ChrFactionsSeeder extends AbstractSdeSeeder
         $table->integer('raceIDs')->nullable();
         $table->integer('solarSystemID')->nullable();
         $table->integer('corporationID')->nullable();
-        $table->integer('sizeFactor')->nullable();
+        $table->float('sizeFactor')->nullable();
         $table->integer('stationCount')->nullable();
-        $table->integer('stationSystemCount')->nullable();
-        $table->integer('militiaCorporationID')->nullable();
+        $table->integer('stationSystemCount')->nullable();        $table->integer('militiaCorporationID')->nullable();
         $table->integer('iconID')->nullable();
     }
 

@@ -53,11 +53,14 @@ class InvTypeMapping extends AbstractSdeMapping
         'published' => 'published',
         'marketGroupID' => 'marketGroupID',
         'iconID' => 'iconID',
+        'soundID' => 'soundID',
         'graphicID' => 'graphicID',
         'factionID' => 'factionID',
-        'metaGroupID' => 'metaGroupID',
-        'radius' => 'radius',
-        'soundID' => 'soundID',
-        'variationParentTypeID' => 'variationParentTypeID',
+        'metaLevel' => 'metaLevel',
+        'techLevel' => 'techLevel',
+        'shipTreeGroupID' => 'shipTreeGroupID',
+        'packagedVolume' => 'packagedVolume',
+        'isDynamicType' => 'isDynamicType',
+        'isRepackable' => 'isRepackable',
     ];
 }

@@ -42,24 +42,29 @@ class InvTypesSeeder extends AbstractSdeSeeder
     protected function getSdeTableDefinition(Blueprint $table): void
     {
         $table->integer('typeID')->primary();
-        $table->integer('groupID');
-        $table->string('typeName', 150);
+        $table->integer('groupID')->nullable();
+        $table->string('typeName', 150)->nullable();
         $table->text('description')->nullable();
         $table->double('mass')->nullable();
         $table->double('volume')->nullable();
         $table->double('capacity')->nullable();
         $table->integer('portionSize')->nullable();
         $table->integer('raceID')->nullable();
-        $table->double('basePrice')->nullable();
-        $table->boolean('published')->default(false);
+        $table->decimal('basePrice', 19, 4)->nullable();
+        $table->boolean('published')->nullable();
         $table->integer('marketGroupID')->nullable();
         $table->integer('iconID')->nullable();
+        $table->integer('soundID')->nullable();
         $table->integer('graphicID')->nullable();
         $table->integer('factionID')->nullable();
-        $table->integer('metaGroupID')->nullable();
-        $table->double('radius')->nullable();
-        $table->integer('soundID')->nullable();
-        $table->integer('variationParentTypeID')->nullable();
+        $table->integer('metaLevel')->nullable();
+        $table->integer('techLevel')->nullable();
+        $table->integer('shipTreeGroupID')->nullable();
+        $table->double('packagedVolume')->nullable();
+        $table->boolean('isDynamicType')->nullable();
+        $table->boolean('isRepackable')->nullable();
+
+        $table->index('groupID', 'ix_invTypes_groupID');
     }
 
     /**
@@ -74,7 +79,6 @@ class InvTypesSeeder extends AbstractSdeSeeder
 
     public function insert($arr) 
     {
-        // Replace 'YourModel' with the actual model class name
         return InvType::insert($arr);
     }
 }

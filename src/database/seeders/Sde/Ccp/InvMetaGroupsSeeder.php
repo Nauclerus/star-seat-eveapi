@@ -43,12 +43,8 @@ class InvMetaGroupsSeeder extends AbstractSdeSeeder
     {
         $table->integer('metaGroupID')->primary();
         $table->string('metaGroupName', 100)->nullable();
-        $table->string('description', 3000)->nullable();
-        $table->string('iconSuffix', 256)->nullable();
+        $table->string('description', 1000)->nullable();
         $table->integer('iconID')->nullable();
-        $table->integer('colorRed')->nullable();
-        $table->integer('colorBlue')->nullable();
-        $table->integer('colorGreen')->nullable();
     }
 
     /**
@@ -63,7 +59,6 @@ class InvMetaGroupsSeeder extends AbstractSdeSeeder
 
     public function insert($arr)
     {
-        // Replace 'YourModel' with the actual model class name
         return InvMetaGroup::insert($arr);
     }
 }

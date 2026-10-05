@@ -20,18 +20,23 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+
 namespace Seat\Eveapi\Database\Seeders\Sde\Ccp;
 
 use Illuminate\Database\Schema\Blueprint;
-use Seat\Eveapi\Mapping\Sde\AbstractSdeMapping;
 use Seat\Eveapi\Database\Seeders\Sde\AbstractSdeSeeder;
-use Seat\Eveapi\Mapping\Sde\Ccp\InvContrabandTypeMapping;
-use Seat\Eveapi\Models\Sde\InvContrabandType;
+use Seat\Eveapi\Mapping\Sde\AbstractSdeMapping;
+use Seat\Eveapi\Mapping\Sde\Ccp\InvTypeMaterialMapping;
+use Seat\Eveapi\Models\Sde\InvTypeMaterial;
 
-class InvContrabandTypesSeeder extends AbstractSdeSeeder
+/**
+ * Class InvTypeMaterialsSeeder.
+ *
+ * @package Seat\Eveapi\Database\Seeders\Sde\Ccp
+ */
+class InvTypeMaterialsSeeder extends AbstractSdeSeeder
 {
-
-    protected const FILENAME = "contrabandTypes.jsonl";
+    protected const FILENAME = 'typeMaterials.jsonl';
 
     protected const IS_MULTI_SEEDER = true;
 
@@ -43,14 +48,11 @@ class InvContrabandTypesSeeder extends AbstractSdeSeeder
      */
     protected function getSdeTableDefinition(Blueprint $table): void
     {
-        $table->integer('factionID');
         $table->integer('typeID');
-        $table->double('standingLoss')->nullable();
-        $table->double('confiscateMinSec')->nullable();
-        $table->double('fineByValue')->nullable();
-        $table->double('attackMinSec')->nullable();
-        $table->primary(['factionID', 'typeID']);
-        $table->index('typeID', 'ix_invContrabandTypes_typeID');
+        $table->integer('materialTypeID');
+        $table->integer('quantity')->nullable();
+
+        $table->primary(['typeID', 'materialTypeID']);
     }
 
     /**
@@ -60,11 +62,15 @@ class InvContrabandTypesSeeder extends AbstractSdeSeeder
      */
     protected function getMappingClass(): AbstractSdeMapping
     {
-        return new InvContrabandTypeMapping();
+        return new InvTypeMaterialMapping();
     }
 
+    /**
+     * @param  array  $arr
+     * @return int
+     */
     public function insert($arr)
     {
-        return InvContrabandType::insert($arr);
+        return InvTypeMaterial::insert($arr);
     }
 }

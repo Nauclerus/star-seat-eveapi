@@ -51,7 +51,37 @@ abstract class AbstractSdeSeeder extends Seeder
 
     protected const FILENAME = "";
 
+    /**
+     * Provide the SDE dump filename the active seeder reads.
+     *
+     * @return string
+     */
+    final public static function getSdeFilename(): string
+    {
+        return static::FILENAME;
+    }
+
     protected const IS_MULTI_SEEDER = false;
+
+    /**
+     * Directory the dump files are read from. The CCP import extracts a build
+     * numbered set of jsonl files under storage/sde/<build>/ and sets this so
+     * the seeders read that build instead of a flat storage/sde folder.
+     *
+     * @var string|null
+     */
+    protected static ?string $source_directory = null;
+
+    /**
+     * Set the directory every SDE seeder reads its dump file from.
+     *
+     * @param  string|null  $directory
+     * @return void
+     */
+    public static function setSourceDirectory(?string $directory): void
+    {
+        static::$source_directory = $directory;
+    }
 
     /**
      * Download SDE file, create related table and seed it with dump.
@@ -66,6 +96,8 @@ abstract class AbstractSdeSeeder extends Seeder
             $this->disableFK();
 
             $this->createTable();
+
+            $this->before();
 
             $this->seedTable();
 
@@ -120,6 +152,16 @@ abstract class AbstractSdeSeeder extends Seeder
     abstract public function insert($arr);
 
     /**
+     * Determine actions which have to be executed before the seeding process.
+     *
+     * @return void
+     */
+    protected function before(): void
+    {
+        // override this method if your seeder needs to prepare something.
+    }
+
+    /**
      * Determine actions which have to be executed after the seeding process.
      *
      * @return void
@@ -127,6 +169,21 @@ abstract class AbstractSdeSeeder extends Seeder
     protected function after(): void
     {
         // override this method if you need your seeder to do extra things.
+    }
+
+    /**
+     * Path of a dump file in the directory the import currently reads from.
+     *
+     * @param  string  $filename
+     * @return string
+     */
+    protected function sourcePath(string $filename): string
+    {
+        if (! is_null(static::$source_directory))
+            return rtrim(static::$source_directory, DIRECTORY_SEPARATOR) .
+                DIRECTORY_SEPARATOR . $filename;
+
+        return storage_path(sprintf('sde/%s', $filename));
     }
 
     /**
@@ -152,7 +209,7 @@ abstract class AbstractSdeSeeder extends Seeder
      */
     final protected function seedTable(): void
     {
-        $path = storage_path(sprintf("sde/%s", $this::FILENAME));
+        $path = $this->sourcePath($this::FILENAME);
 
         if (! file_exists($path))
             throw new FileNotFoundException("Unable to retrieve $path.");
