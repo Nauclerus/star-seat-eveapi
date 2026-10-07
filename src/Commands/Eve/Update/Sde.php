@@ -55,6 +55,33 @@ class Sde extends Command
     private const FUZZWORK_TABLES_URL = 'https://www.fuzzwork.co.uk/dump/latest/mysql_tables/';
 
     /**
+     * Tables the SDE import populates and that the completeness check expects.
+     *
+     * Hoisted from the list getJsonResource() used to build inline: the CCP
+     * jsonl patch started referring to this constant but never defined it, so
+     * eve:update:sde died with "Undefined constant Sde::SDE_TABLES".
+     *
+     * @var string[]
+     */
+    private const SDE_TABLES = [
+        'chrFactions',
+        'dgmTypeAttributes',
+        'dgmTypeEffects',
+        'invCategories',
+        'invContrabandTypes',
+        'invControlTowerResources',
+        'invGroups',
+        'invMarketGroups',
+        'invMetaGroups',
+        'invMetaTypes',
+        'invTypeMaterials',
+        'invTypes',
+        'mapDenormalize',
+        'ramActivities',
+        'staStations',
+    ];
+
+    /**
      * The name and signature of the console command.
      *
      * @var string
