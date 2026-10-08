@@ -479,11 +479,23 @@ class Sde extends Command
     public function getJsonResource()
     {
 
+        // Fuzzwork publishes the retired tables too, so its list is wider
+        // than the CCP archive's. Keep it explicit rather than reusing
+        // SDE_TABLES, which only covers what the CCP import populates.
+        $tables = [
+            'chrFactions', 'dgmTypeAttributes', 'dgmTypeEffects', 'invCategories',
+            'invContrabandTypes', 'invControlTowerResourcePurposes',
+            'invControlTowerResources', 'invFlags', 'invGroups', 'invItems',
+            'invMarketGroups', 'invMetaGroups', 'invMetaTypes', 'invNames',
+            'invPositions', 'invTypeMaterials', 'invTypeReactions', 'invTypes',
+            'invUniqueNames', 'mapDenormalize', 'ramActivities', 'staStations',
+        ];
+
         return (object) [
             'version' => $this->getFuzzworkLatestVersion(),
             'url' => self::FUZZWORK_TABLES_URL,
             'format' => '.sql.gz',
-            'tables' => self::SDE_TABLES,
+            'tables' => $tables,
         ];
     }
 
